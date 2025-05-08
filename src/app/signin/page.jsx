@@ -1,11 +1,10 @@
 "use client";
 import { FcGoogle } from "react-icons/fc";
 import { useState, useEffect } from "react";
-import { auth } from "@/firebase/firebaseConfig";
+import { auth } from "../../firebase/firebaseConfig";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "../context/authContextConfig";
-import ProtectRoute from "../components/ProtectRoute";
 
 const SignInPage = () => {
   const [error, setError] = useState("");
@@ -37,16 +36,10 @@ const SignInPage = () => {
         <h1 className="text-center text-[40px] font-extrabold text-teal4 hover:cursor-pointer">
           Shopping List App - Google Interview Project
         </h1>
-        <h1 className="text-center text-[25px] font-bold text-teal4">
-          Sign In
-        </h1>
+        <h1 className="text-center text-[25px] font-bold text-teal4">Sign In</h1>
       </div>
       <div className="w-full items-center justify-center flex flex-col gap-5 mt-10">
-        {error && (
-          <div className="bg-red-100 border border-red-500 p-2 rounded-lg text-red-600 w-1/4">
-            {error}
-          </div>
-        )}
+        {error && <div className="bg-red-100 border border-red-500 p-2 rounded-lg text-red-600 w-1/4">{error}</div>}
         <button
           className="bg-white text-teal4 font-semibold border border-gray-300 p-3 rounded-md w-1/4 flex justify-center items-center gap-5 hover:cursor-pointer hover:bg-gray-50"
           onClick={handleGoogleSignIn}
