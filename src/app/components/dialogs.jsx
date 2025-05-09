@@ -111,7 +111,17 @@ export const NewShoppingListDialog = () => {
 };
 
 export const EditShoppingListDialog = () => {
-  const listItems = Array(10).fill({ itemName: "Item Name", itemQuantity: 5, itemPrice: "£10" });
+  const { openEditShoppingListDialog, setOpenEditShoppingListDialog, shoppingListData, setShoppingListData } =
+    useDialogContext();
+
+  const { listId, listName, listDescription, convertedListDate, listItems } = shoppingListData;
+  console.log({ listId, listName, listDescription, convertedListDate, listItems });
+  const [nativeListDiscription, setNativeListDiscription] = useState(listDescription);
+
+  const handleSaveList = () => {
+    document.body.style.overflow = "";
+    setOpenEditShoppingListDialog(false);
+  };
 
   return (
     <div className="bg-black/50 w-full h-full fixed inset-0 z-50 flex justify-center items-center">
@@ -123,17 +133,19 @@ export const EditShoppingListDialog = () => {
           <div className="flex w-full justify-between items-center gap-5">
             {/* list heading div */}
             <div className="flex w-1/2 justify-between items-center gap-5">
-              <h1 className="text-[25px] font-bold">New Shopping List</h1>
-              <span className="text-gray-600 font-semibold">11/03/2025</span>
+              <h1 className="text-[25px] font-bold">{listName}</h1>
+              <span className="text-gray-600 font-semibold">{convertedListDate}</span>
             </div>
 
             {/* save div */}
 
-            <button>Save</button>
+            <button onClick={handleSaveList}>Save</button>
           </div>
           <textarea
             className="border border-gray-200 rounded-lg p-2 w-full focus:border-gray-300 outline-none overflow-auto h-[60px] text-gray-600"
-            value="The shopping lists list object will display data information about the items it contains The shopping lists list object will display data information about the items it containsThe shopping lists list object will display data information about the items it contains"
+            name="listDescription"
+            value={nativeListDiscription}
+            onChange={(e) => setNativeListDiscription(e.target.value)}
           />
         </div>
 

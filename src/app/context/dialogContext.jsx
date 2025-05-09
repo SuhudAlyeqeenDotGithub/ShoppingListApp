@@ -5,6 +5,7 @@ const DialogContext = createContext();
 export const DialogProvider = ({ children }) => {
   const [openNewShoppingListDialog, setOpenNewShoppingListDialog] = useState(false);
   const [openEditShoppingListDialog, setOpenEditShoppingListDialog] = useState(false);
+  const [shoppingListData, setShoppingListData] = useState({});
 
   return (
     <DialogContext.Provider
@@ -12,7 +13,9 @@ export const DialogProvider = ({ children }) => {
         openNewShoppingListDialog,
         openEditShoppingListDialog,
         setOpenNewShoppingListDialog,
-        setOpenEditShoppingListDialog
+        setOpenEditShoppingListDialog,
+        shoppingListData,
+        setShoppingListData
       }}
     >
       {children}

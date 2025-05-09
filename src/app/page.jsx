@@ -2,7 +2,7 @@
 import { FaSearch } from "react-icons/fa";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { NewShoppingListDialog, EditShoppingListDialog } from "./components/dialogs";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuthContext } from "./context/authContextConfig";
 import { auth, db } from "../firebase/firebaseConfig";
 import { signOut } from "firebase/auth";
@@ -14,7 +14,6 @@ import { useDialogContext } from "./context/dialogContext";
 export default function Home() {
   const router = useRouter();
   const { user, setUser } = useAuthContext();
-
   useEffect(() => {
     if (!user) {
       router.push("/signin");
@@ -22,21 +21,29 @@ export default function Home() {
   }, [user, router]);
 
   if (!user) return null;
-
-  const { displayName, email, photoURL, uid } = user;
   const {
     openNewShoppingListDialog,
     openEditShoppingListDialog,
     setOpenNewShoppingListDialog,
-    setOpenEditShoppingListDialog
+    setOpenEditShoppingListDialog,
+    shoppingListData,
+    setShoppingListData
   } = useDialogContext();
   const [shoppingLists, setShoppingLists] = useState([]);
+  const [filteredShoppingLists, setFilteredShoppingLists] = useState([]);
+  const [searchValue, setSearchValue] = useState("");
+
+  const { displayName, email, photoURL, uid } = user;
 
   const listValueDivStyle =
     " rounded-lg flex flex-col gap-2 items-center justify-center bg-white border border-gray-300 px-3 py-5 w-full h-20";
 
   const listValueFigureStyle = "";
   const listValueHeadStyle = "whitespace-nowrap font-semibold";
+
+  const handleSearchShoppingList = (e) => {
+    setSearchValue(e.target.value.toLowerCase().trim());
+  };
 
   const handleNewShoppingList = () => {
     document.body.style.overflow = "hidden";
@@ -48,7 +55,8 @@ export default function Home() {
     setOpenNewShoppingListDialog(false);
   };
 
-  const handleViewShoppingList = () => {
+  const handleViewShoppingList = (shoppingListData) => {
+    setShoppingListData(shoppingListData);
     document.body.style.overflow = "hidden";
     setOpenEditShoppingListDialog(true);
   };
@@ -56,8 +64,6 @@ export default function Home() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setUser(null);
-
       router.push("/signin");
     } catch (error) {
       console.error("Error logging out: ", error);
@@ -89,7 +95,15 @@ export default function Home() {
     };
   }, [user]);
 
-  console.log("shoppingLists", shoppingLists);
+  // use effect to set the shoppingLists state when filteredShoppingLists changes
+  useEffect(() => {
+    if (searchValue === "") {
+      setFilteredShoppingLists(shoppingLists);
+    } else {
+      const result = shoppingLists.filter(({ listName }) => listName.toLowerCase().includes(searchValue));
+      setFilteredShoppingLists(result);
+    }
+  }, [searchValue, shoppingLists]);
 
   return (
     <div className="bg-white p-10 flex flex-col gap-8">
@@ -133,7 +147,11 @@ export default function Home() {
       <div className="flex gap-20 justify-center items-center w-full">
         {/* search div */}
         <div className=" flex justify-between gap-5 items-center px-3 py-1 border border-gray-300 rounded-2xl shadow w-1/3">
-          <input className="w-full outline-none" placeholder="Search Shopping List - By Name" />
+          <input
+            className="w-full outline-none"
+            placeholder="Search Shopping List - By Name"
+            onChange={handleSearchShoppingList}
+          />
           <span className="rounded-full hover:bg-gray-200 hover:cursor-pointer p-2">
             <FaSearch className="size-5 text-gray-500" />
           </span>
@@ -148,13 +166,12 @@ export default function Home() {
 
       {/* main body. shopping lists */}
       <div className="flex flex-wrap gap-5 overflow-auto h-[1000px] px-10 w-full justify-center mt-5">
-        {shoppingLists.length > 0 ? (
-          shoppingLists.map((list) => {
-            const { listId, listName } = list;
+        {filteredShoppingLists.length > 0 ? (
+          filteredShoppingLists.map((list) => {
+            const { listId, listName, listDescription, listItems } = list;
 
             // Convert Firestore Timestamp (seconds and nanoseconds) to JavaScript Date
             const convertedListDate = list.listDate?.toDate().toLocaleDateString();
-            console.log("convertedListDate", convertedListDate);
 
             return (
               <div
@@ -191,7 +208,13 @@ export default function Home() {
 
                 {/* Bottom action div */}
                 <div className="flex justify-between items-center gap-5">
-                  <button onClick={handleViewShoppingList}>View Items</button>
+                  <button
+                    onClick={() => {
+                      handleViewShoppingList({ listId, listName, listDescription, convertedListDate, listItems });
+                    }}
+                  >
+                    View Items
+                  </button>
                   <span className="rounded-full hover:bg-gray-200 hover:cursor-pointer p-2">
                     <RiDeleteBin6Line className="size-6" />
                   </span>
@@ -200,7 +223,7 @@ export default function Home() {
             );
           })
         ) : (
-          <div>No Shopping List. Let's start adding</div>
+          <div>{searchValue ? "No result found for search" : "No Shopping List. Let's start adding"}</div>
         )}
       </div>
     </div>
