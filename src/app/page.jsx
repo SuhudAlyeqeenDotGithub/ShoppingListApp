@@ -22,18 +22,49 @@ export default function Home() {
     shoppingListData,
     setShoppingListData
   } = useDialogContext();
+  const [shoppingLists, setShoppingLists] = useState([]);
+  const [filteredShoppingLists, setFilteredShoppingLists] = useState([]);
+  const [searchValue, setSearchValue] = useState("");
   useEffect(() => {
     if (!user) {
       router.push("/signin");
     }
   }, [user, router]);
 
+  useEffect(() => {
+    if (!user) return;
+    // Create snapshot listener for shoppingLists collection
+    const unsubscribe = onSnapshot(
+      collection(db, "users", uid, "shoppingLists"),
+      (snapShot) => {
+        const retrievedShoppingLists = snapShot.docs.map((doc) => ({
+          listId: doc.id,
+          ...doc.data()
+        }));
+
+        setShoppingLists(retrievedShoppingLists);
+      },
+      (error) => {
+        console.error("Error getting shopping lists: ", error);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user]);
+
+  // use effect to set the shoppingLists state when filteredShoppingLists changes
+  useEffect(() => {
+    if (searchValue === "") {
+      setFilteredShoppingLists(shoppingLists);
+    } else {
+      const result = shoppingLists.filter(({ listName }) => listName.toLowerCase().includes(searchValue));
+      setFilteredShoppingLists(result);
+    }
+  }, [searchValue, shoppingLists]);
+
   if (!user) return null;
-
-  const [shoppingLists, setShoppingLists] = useState([]);
-  const [filteredShoppingLists, setFilteredShoppingLists] = useState([]);
-  const [searchValue, setSearchValue] = useState("");
-
   const { displayName, email, photoURL, uid } = user;
 
   const listValueDivStyle =
@@ -86,41 +117,6 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    if (!user) return;
-    // Create snapshot listener for shoppingLists collection
-    const unsubscribe = onSnapshot(
-      collection(db, "users", uid, "shoppingLists"),
-      (snapShot) => {
-        const retrievedShoppingLists = snapShot.docs.map((doc) => ({
-          listId: doc.id,
-          ...doc.data()
-        }));
-
-        setTimeout(() => {
-          setShoppingLists(retrievedShoppingLists);
-        }, 1000);
-      },
-      (error) => {
-        console.error("Error getting shopping lists: ", error);
-      }
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, [user]);
-
-  // use effect to set the shoppingLists state when filteredShoppingLists changes
-  useEffect(() => {
-    if (searchValue === "") {
-      setFilteredShoppingLists(shoppingLists);
-    } else {
-      const result = shoppingLists.filter(({ listName }) => listName.toLowerCase().includes(searchValue));
-      setFilteredShoppingLists(result);
-    }
-  }, [searchValue, shoppingLists]);
-
   return (
     <div className="bg-white p-10 flex flex-col gap-8">
       {/* new list dialog div */}
@@ -138,7 +134,7 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center gap-1">
             <div
               title={displayName}
-              className="rounded-full h-11 w-11 flex items-center justify-center border border-gray-300 shadow"
+              className="rounded-full h-11 w-11 flex items-center justify-center border border-gray-400 shadow"
               style={{
                 background: `url(${photoURL})`,
                 backgroundPosition: "center",

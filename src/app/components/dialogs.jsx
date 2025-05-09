@@ -7,6 +7,9 @@ import { useDialogContext } from "../context/dialogContext";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useAuthContext } from "../context/authContextConfig";
+import { nanoid } from "nanoid";
+
+const inputStyle = "outline-none border border-gray-300 rounded-lg p-3 py-2 w-full focus:border-gray-400";
 
 export const NewShoppingListDialog = () => {
   const { openNewShoppingListDialog, setOpenNewShoppingListDialog } = useDialogContext();
@@ -17,8 +20,6 @@ export const NewShoppingListDialog = () => {
     return null;
   }
   const { uid } = user;
-
-  const inputStyle = "outline-none border border-gray-300 rounded-lg p-3 py-2 w-full focus:border-gray-400";
 
   const [newListData, setNewListData] = useState({
     listName: "",
@@ -115,16 +116,150 @@ export const EditShoppingListDialog = () => {
     useDialogContext();
 
   const { listId, listName, listDescription, convertedListDate, listItems } = shoppingListData;
-  console.log({ listId, listName, listDescription, convertedListDate, listItems });
   const [nativeListDiscription, setNativeListDiscription] = useState(listDescription);
+  const [nativeItemsList, setNativeItemsList] = useState(listItems);
+  const [openNewItemDialog, setOpenNewItemDialog] = useState(false);
+  const [onItemEdit, setOnItemEdit] = useState(false);
+
+  const [itemData, setItemData] = useState({
+    itemId: "",
+    itemName: "",
+    itemDescription: "",
+    itemPrice: "",
+    itemQuantity: ""
+  });
+
+  const { itemId, itemName, itemDescription, itemPrice, itemQuantity } = itemData;
 
   const handleSaveList = () => {
     document.body.style.overflow = "";
     setOpenEditShoppingListDialog(false);
   };
+  const handleChange = (e) => {
+    setItemData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+  const handleCreateNewItem = () => {
+    if (!itemName) return;
+    const newItem = {
+      itemId: nanoid(),
+      itemName,
+      itemDescription,
+      itemPrice: !itemPrice ? "£0" : itemPrice,
+      itemQuantity: !itemQuantity ? 0 : itemQuantity
+    };
+
+    setNativeItemsList((prev) => [...prev, newItem]);
+
+    setItemData({
+      itemId: "",
+      itemName: "",
+      itemDescription: "",
+      itemPrice: "",
+      itemQuantity: ""
+    });
+    setOpenNewItemDialog(false);
+  };
+
+  const handleEditItem = () => {
+    if (!itemName) return;
+
+    const updatedItems = nativeItemsList.map((item) => {
+      return item.itemId === itemId ? itemData : item;
+    });
+
+    setNativeItemsList(updatedItems);
+    setItemData({
+      itemId: "",
+      itemName: "",
+      itemDescription: "",
+      itemPrice: "",
+      itemQuantity: ""
+    });
+    setOnItemEdit(false);
+  };
+
+  const handleEditOrNewItem = (occasion) => {
+    if (occasion === "new") {
+      handleCreateNewItem();
+    } else {
+      handleEditItem();
+    }
+  };
+
+  const handleSingleItemDelete = (itemId) => {
+    const updatedItems = nativeItemsList.filter((item) => item.itemId !== itemId);
+    setNativeItemsList(updatedItems);
+  };
+
+  // dialog pop up for adding new item to the shopping list
+  const newShoppingListItemDialog = (
+    <div className="bg-black/50 w-full h-full fixed inset-0 z-50 flex justify-center items-center">
+      {/* dialog */}
+      <div className=" flex flex-col gap-7 border border-gray-300 bg-gray-100 shadow p-6 rounded-lg min-h-[400px] w-[500px]">
+        {/* heading div */}
+        <div className="flex w-full justify-between items-center gap-5 text-[20px] font-bold">
+          <h1> {onItemEdit ? "Edit" : "Create"} Item</h1>
+          <IoMdClose
+            className="hover:text-gray-500"
+            onClick={() => {
+              onItemEdit ? setOnItemEdit(false) : setOpenNewItemDialog(false);
+            }}
+          />
+        </div>
+        {/* body div */}
+        <div className="flex flex-col gap-4">
+          <input
+            type="text"
+            placeholder="Item Name"
+            name="itemName"
+            value={itemName}
+            className={inputStyle}
+            onChange={handleChange}
+            required
+          />
+          <textarea
+            placeholder="Item Description"
+            name="itemDescription"
+            value={itemDescription}
+            className={inputStyle}
+            onChange={handleChange}
+          />
+          <input
+            type="number"
+            placeholder="Item Quantity"
+            name="itemQuantity"
+            value={itemQuantity}
+            className={inputStyle}
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            placeholder="(£) Pound.Penny - Item Price"
+            name="itemPrice"
+            value={itemPrice}
+            className={inputStyle}
+            onChange={handleChange}
+          />
+        </div>
+        {/* action button div */}
+        <div className="w-full flex justify-center items-center">
+          <button
+            type="submit"
+            disabled={!itemName}
+            className="w-1/5"
+            onClick={() => handleEditOrNewItem(onItemEdit ? "edit" : "new")}
+          >
+            {onItemEdit ? "Edit" : "Create"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="bg-black/50 w-full h-full fixed inset-0 z-50 flex justify-center items-center">
+      {/* new item dialog div */}
+      {(openNewItemDialog || onItemEdit) && newShoppingListItemDialog}
       {/* dialog */}
       <div className=" flex flex-col gap-12 border border-gray-300 bg-gray-100 shadow p-8 rounded-lg h-[800px] w-[800px]">
         {/* heading and save action div */}
@@ -152,8 +287,21 @@ export const EditShoppingListDialog = () => {
         {/* action button and search div */}
         <div className="flex justify-center items-center gap-10 px-5">
           <div className="flex justify-center items-center gap-5">
-            <button>Delete</button>
-            <button>New Item</button>
+            <button onClick={() => setNativeItemsList([])}>Delete</button>
+            <button
+              onClick={() => {
+                setItemData({
+                  itemId: "",
+                  itemName: "",
+                  itemDescription: "",
+                  itemPrice: "",
+                  itemQuantity: ""
+                });
+                setOpenNewItemDialog(true);
+              }}
+            >
+              New Item
+            </button>
           </div>
 
           <div className=" flex justify-between gap-5 items-center px-3 py-1 border border-gray-300 rounded-2xl shadow w-full">
@@ -167,11 +315,7 @@ export const EditShoppingListDialog = () => {
         {/* body div */}
         <div className="flex flex-col gap-4">
           {/* body headings */}
-          <div className="grid grid-cols-5 gap-5 justify-between items-center ml-5 font-semibold">
-            <div className="flex items-center gap-4">
-              <input type="checkbox" className="w-5 h-5 accent-gray-700" />
-              <h1 className="text-gray-500 mt-1">20</h1>
-            </div>
+          <div className="flex gap-5 justify-between items-center mr-10 ml-5 font-semibold">
             <h1>Name</h1>
             <h1>Quantity</h1>
             <h1>Price</h1>
@@ -179,19 +323,32 @@ export const EditShoppingListDialog = () => {
           </div>
           {/* body items */}
           <div className="flex flex-col gap-2 items-center overflow-auto h-[460px] p-2">
-            {listItems.length > 0
-              ? listItems.map(({ itemName, itemPrice, itemQuantity }) => (
-                  <div className="grid grid-cols-5 p-4 gap-5 justify-between items-center border border-gray-300 shadow-sm rounded-lg w-full bg-gray-50 hover:bg-gray-100">
-                    <input type="checkbox" className="w-5 h-5 accent-gray-700" />
-                    <h1>{itemName}</h1>
-                    <h1>{itemQuantity}</h1>
-                    <h1>{itemPrice}</h1>
-                    <div className="flex gap-3 justify-center items-center text-[20px] text-gray-900">
-                      <FaEdit className="hover:text-gray-500 hover:cursor-pointer" />
-                      <RiDeleteBin6Line className="hover:text-gray-500 hover:cursor-pointer" />
+            {nativeItemsList.length > 0
+              ? nativeItemsList.map((item) => {
+                  return (
+                    <div
+                      key={item.itemId}
+                      className="flex py-4 px-6 gap-5 justify-between items-center border border-gray-300 shadow-sm rounded-lg w-full bg-gray-50 hover:bg-gray-100"
+                    >
+                      <h1>{item.itemName}</h1>
+                      <h1>{item.itemQuantity}</h1>
+                      <h1>{item.itemPrice}</h1>
+                      <div className="flex gap-3 justify-center items-center text-[20px] text-gray-900">
+                        <FaEdit
+                          className="hover:text-gray-500 hover:cursor-pointer"
+                          onClick={() => {
+                            setOnItemEdit(true);
+                            setItemData(item);
+                          }}
+                        />
+                        <RiDeleteBin6Line
+                          className="hover:text-gray-500 hover:cursor-pointer"
+                          onClick={() => handleSingleItemDelete(item.itemId)}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               : "You have not items in this list. Let's start adding"}
           </div>
         </div>
