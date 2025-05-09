@@ -2,9 +2,9 @@
 import { IoMdClose } from "react-icons/io";
 import { FaSearch, FaEdit } from "react-icons/fa";
 import { RiDeleteBin6Line } from "react-icons/ri";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDialogContext } from "../context/dialogContext";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useAuthContext } from "../context/authContextConfig";
 import { nanoid } from "nanoid";
@@ -14,7 +14,6 @@ const inputStyle = "outline-none border border-gray-300 rounded-lg p-3 py-2 w-fu
 export const NewShoppingListDialog = () => {
   const { openNewShoppingListDialog, setOpenNewShoppingListDialog } = useDialogContext();
   const { user } = useAuthContext();
-
   if (!user) {
     router.push("/signin");
     return null;
@@ -114,13 +113,20 @@ export const NewShoppingListDialog = () => {
 export const EditShoppingListDialog = () => {
   const { openEditShoppingListDialog, setOpenEditShoppingListDialog, shoppingListData, setShoppingListData } =
     useDialogContext();
+  const { user } = useAuthContext();
+  if (!user) {
+    router.push("/signin");
+    return null;
+  }
+  const { uid } = user;
 
   const { listId, listName, listDescription, convertedListDate, listItems } = shoppingListData;
   const [nativeListDiscription, setNativeListDiscription] = useState(listDescription);
   const [nativeItemsList, setNativeItemsList] = useState(listItems);
   const [openNewItemDialog, setOpenNewItemDialog] = useState(false);
   const [onItemEdit, setOnItemEdit] = useState(false);
-
+  const [openSaveWarningDialog, setOpenSaveWarningDialog] = useState(false);
+  const [unSavedChanges, setUnSavedChanges] = useState(false);
   const [itemData, setItemData] = useState({
     itemId: "",
     itemName: "",
@@ -128,14 +134,59 @@ export const EditShoppingListDialog = () => {
     itemPrice: "",
     itemQuantity: ""
   });
+  const [searchValue, setSearchValue] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (unSavedChanges) {
+        e.preventDefault();
+      }
+    };
+
+    // Add the event listener when the component is mounted
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [unSavedChanges]);
+
+  useEffect(() => {
+    if (searchValue === "") {
+      setNativeItemsList(listItems);
+    } else {
+      const result = listItems.filter(({ itemName }) => itemName.toLowerCase().includes(searchValue));
+      setNativeItemsList(result);
+    }
+  }, [searchValue, listItems]);
 
   const { itemId, itemName, itemDescription, itemPrice, itemQuantity } = itemData;
 
-  const handleSaveList = () => {
-    document.body.style.overflow = "";
-    setOpenEditShoppingListDialog(false);
+  const handleSaveList = async () => {
+    const docRef = doc(db, "users", uid, "shoppingLists", listId);
+
+    const dataToUpdate = {
+      listName,
+      listDescription: nativeListDiscription,
+      listItems: nativeItemsList,
+      listDate: new Date(convertedListDate)
+    };
+
+    console.log("dataToUpdate", dataToUpdate);
+    try {
+      await updateDoc(docRef, dataToUpdate);
+
+      setUnSavedChanges(false);
+      document.body.style.overflow = "";
+      setOpenEditShoppingListDialog(false);
+    } catch (error) {
+      setError(error?.message || "Error creating shopping list");
+    }
   };
   const handleChange = (e) => {
+    setUnSavedChanges(true);
     setItemData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
   const handleCreateNewItem = () => {
@@ -249,8 +300,20 @@ export const EditShoppingListDialog = () => {
             className="w-1/5"
             onClick={() => handleEditOrNewItem(onItemEdit ? "edit" : "new")}
           >
-            {onItemEdit ? "Edit" : "Create"}
+            {onItemEdit ? "Done" : "Create"}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const saveWarningDialog = (
+    <div className="bg-black/50 w-full h-full fixed inset-0 z-50 flex justify-center items-center">
+      <div className="flex flex-col items-center gap-10 border border-gray-300 bg-gray-100 shadow pt-10 pb-4 rounded-lg min-h-[100px] w-[450px]">
+        <h1 className="font-semibold">Please save you current items before you continue</h1>
+        <div className="flex justify-between items-center gap-5 w-3/4">
+          <button onClick={() => setOpenSaveWarningDialog(false)}>Keep Editing</button>
+          <button onClick={handleSaveList}>Save</button>
         </div>
       </div>
     </div>
@@ -260,8 +323,9 @@ export const EditShoppingListDialog = () => {
     <div className="bg-black/50 w-full h-full fixed inset-0 z-50 flex justify-center items-center">
       {/* new item dialog div */}
       {(openNewItemDialog || onItemEdit) && newShoppingListItemDialog}
+      {openSaveWarningDialog && saveWarningDialog}
       {/* dialog */}
-      <div className=" flex flex-col gap-12 border border-gray-300 bg-gray-100 shadow p-8 rounded-lg h-[800px] w-[800px]">
+      <div className=" flex flex-col gap-12 border border-gray-300 bg-gray-100 shadow p-8 rounded-lg h-[870px] w-[800px]">
         {/* heading and save action div */}
         <div className="flex flex-col gap-4">
           {/* heading 1 */}
@@ -305,7 +369,13 @@ export const EditShoppingListDialog = () => {
           </div>
 
           <div className=" flex justify-between gap-5 items-center px-3 py-1 border border-gray-300 rounded-2xl shadow w-full">
-            <input className="w-full outline-none" placeholder="Search Shopping List - By Name" />
+            <input
+              className="w-full outline-none"
+              placeholder="Search Shopping List - By Name"
+              name="searchValue"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+            />
             <span className="rounded-full hover:bg-gray-200 hover:cursor-pointer p-2">
               <FaSearch className="size-5 text-gray-500" />
             </span>
@@ -349,8 +419,11 @@ export const EditShoppingListDialog = () => {
                     </div>
                   );
                 })
-              : "You have not items in this list. Let's start adding"}
+              : searchValue
+              ? "No result found for search"
+              : "No Shopping List. Let's start adding"}
           </div>
+          {error && <div className="text-red-600 w-full bg-red-200 p-1 border rounded-lg font-semibold">{error}</div>}
         </div>
       </div>
     </div>
