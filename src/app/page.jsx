@@ -25,6 +25,7 @@ export default function Home() {
   const [shoppingLists, setShoppingLists] = useState([]);
   const [filteredShoppingLists, setFilteredShoppingLists] = useState([]);
   const [searchValue, setSearchValue] = useState("");
+  const [overallTotalCost, setOverallTotalCost] = useState(0);
   useEffect(() => {
     if (!user) {
       router.push("/signin");
@@ -63,6 +64,15 @@ export default function Home() {
       setFilteredShoppingLists(result);
     }
   }, [searchValue, shoppingLists]);
+
+  useEffect(() => {
+    const totalCosts = filteredShoppingLists.reduce(
+      (acc, list) =>
+        acc + list.listItems.reduce((sum, item) => sum + parseFloat(item.itemPrice.match(/\d+(\.\d+)?/)[0]), 0),
+      0
+    );
+    setOverallTotalCost(totalCosts);
+  }, [filteredShoppingLists]);
 
   if (!user) return null;
   const { displayName, email, photoURL, uid } = user;
@@ -150,8 +160,12 @@ export default function Home() {
       <div className="flex flex-col justify-center items-center gap-5">
         {/* amount div */}
         <div className="border border-gray-300 rounded-lg p-10 flex flex-col items-center justify-center gap-4 w-80 h-40">
-          <h1 className="font-semibold">Total Cost</h1>
-          <span className="text-[40px] font-bold">£20</span>
+          <div className="flex flex-col gap-2 items-center justify-center ">
+            <h1 className="font-semibold">Total Cost</h1>
+            <h1 className="text-gray-500 italic">Responsive to search</h1>
+          </div>
+
+          <span className="text-[40px] font-bold">£{overallTotalCost}</span>
         </div>
       </div>
 
@@ -185,6 +199,14 @@ export default function Home() {
             // Convert Firestore Timestamp (seconds and nanoseconds) to JavaScript Date
             const convertedListDate = list.listDate?.toDate().toLocaleDateString();
 
+            // Calculate total cost, total items, and total quantity
+            let totalCost = 0;
+            let totalQuantity = 0;
+            for (const item of listItems) {
+              totalCost += parseFloat(item.itemPrice.match(/\d+(\.\d+)?/)[0]);
+              totalQuantity += parseInt(item.itemQuantity);
+            }
+
             return (
               <div
                 key={listId}
@@ -203,18 +225,18 @@ export default function Home() {
                   <div className="flex flex-row gap-3">
                     <div className={listValueDivStyle}>
                       <h1 className={listValueHeadStyle}>Total Quantity</h1>
-                      <span className={listValueFigureStyle}>{}</span>
+                      <span className={listValueFigureStyle}>{totalQuantity}</span>
                     </div>
                     <div className={listValueDivStyle}>
                       <h1 className={listValueHeadStyle}>Total Items</h1>
-                      <span className={listValueFigureStyle}>{}</span>
+                      <span className={listValueFigureStyle}>{listItems.length}</span>
                     </div>
                   </div>
 
                   {/* 1 col div */}
                   <div className={listValueDivStyle}>
                     <h1 className={listValueHeadStyle}>Total Cost</h1>
-                    <span className={listValueFigureStyle}>{}</span>
+                    <span className={listValueFigureStyle}>{totalCost}</span>
                   </div>
                 </div>
 

@@ -174,7 +174,6 @@ export const EditShoppingListDialog = () => {
       listDate: new Date(convertedListDate)
     };
 
-    console.log("dataToUpdate", dataToUpdate);
     try {
       await updateDoc(docRef, dataToUpdate);
 
