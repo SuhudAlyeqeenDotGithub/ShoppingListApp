@@ -7,20 +7,13 @@ import { useAuthContext } from "./context/authContextConfig";
 import { auth, db } from "../firebase/firebaseConfig";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { collection, addDoc, getDocs, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, doc, deleteDoc, getDocs, writeBatch } from "firebase/firestore";
 
 import { useDialogContext } from "./context/dialogContext";
 
 export default function Home() {
   const router = useRouter();
   const { user, setUser } = useAuthContext();
-  useEffect(() => {
-    if (!user) {
-      router.push("/signin");
-    }
-  }, [user, router]);
-
-  if (!user) return null;
   const {
     openNewShoppingListDialog,
     openEditShoppingListDialog,
@@ -29,6 +22,14 @@ export default function Home() {
     shoppingListData,
     setShoppingListData
   } = useDialogContext();
+  useEffect(() => {
+    if (!user) {
+      router.push("/signin");
+    }
+  }, [user, router]);
+
+  if (!user) return null;
+
   const [shoppingLists, setShoppingLists] = useState([]);
   const [filteredShoppingLists, setFilteredShoppingLists] = useState([]);
   const [searchValue, setSearchValue] = useState("");
@@ -53,6 +54,21 @@ export default function Home() {
   const handleSaveShoppingList = () => {
     document.body.style.overflow = "";
     setOpenNewShoppingListDialog(false);
+  };
+
+  const handleDeleteSingleShoppingList = async (listId) => {
+    const docToDelete = doc(db, "users", uid, "shoppingLists", listId);
+    await deleteDoc(docToDelete);
+  };
+
+  const handleDeleteAllShoppingLists = async () => {
+    const shoppingListsToDelete = collection(db, "users", uid, "shoppingLists");
+    const snapshot = await getDocs(shoppingListsToDelete);
+    const batch = writeBatch(db);
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
   };
 
   const handleViewShoppingList = (shoppingListData) => {
@@ -159,7 +175,7 @@ export default function Home() {
 
         {/* action button div */}
         <div className="flex justify-center items-center gap-10 ">
-          <button>Delete All Shopping List</button>
+          <button onClick={handleDeleteAllShoppingLists}>Delete All Shopping List</button>
           <button onClick={handleNewShoppingList}>New Shopping List</button>
         </div>
       </div>
@@ -215,7 +231,10 @@ export default function Home() {
                   >
                     View Items
                   </button>
-                  <span className="rounded-full hover:bg-gray-200 hover:cursor-pointer p-2">
+                  <span
+                    className="rounded-full hover:bg-gray-200 hover:cursor-pointer p-2"
+                    onClick={() => handleDeleteSingleShoppingList(listId)}
+                  >
                     <RiDeleteBin6Line className="size-6" />
                   </span>
                 </div>
