@@ -11,12 +11,14 @@ const SignInPage = () => {
   const { user } = useAuthContext();
   const router = useRouter();
 
+  // Redirect to home page if user is already signed in
   useEffect(() => {
     if (user) {
       router.replace("/");
     }
   }, [user]);
 
+  // this function handles the sign-in process using Google authentication in a popup window
   const handleGoogleSignIn = async () => {
     try {
       const provider = new GoogleAuthProvider();

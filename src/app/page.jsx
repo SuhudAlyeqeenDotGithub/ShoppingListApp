@@ -13,25 +13,28 @@ import { useDialogContext } from "./context/dialogContext";
 
 export default function Home() {
   const router = useRouter();
-  const { user, setUser } = useAuthContext();
+  const { user } = useAuthContext();
   const {
     openNewShoppingListDialog,
     openEditShoppingListDialog,
     setOpenNewShoppingListDialog,
     setOpenEditShoppingListDialog,
-    shoppingListData,
     setShoppingListData
   } = useDialogContext();
+
   const [shoppingLists, setShoppingLists] = useState([]);
   const [filteredShoppingLists, setFilteredShoppingLists] = useState([]);
   const [searchValue, setSearchValue] = useState("");
   const [overallTotalCost, setOverallTotalCost] = useState(0);
+
+  // this effect is used to redirect the user to the sign-in page if they are not authenticated
   useEffect(() => {
     if (!user) {
       router.push("/signin");
     }
-  }, [user, router]);
+  }, [user]);
 
+  // this effect is used to monitor shopping lists changes on the firestore database and update the state accordingly
   useEffect(() => {
     if (!user) return;
     // Create snapshot listener for shoppingLists collection
@@ -65,6 +68,7 @@ export default function Home() {
     }
   }, [searchValue, shoppingLists]);
 
+  // use effect to calculate the overall total cost of all shopping lists
   useEffect(() => {
     const totalCosts = filteredShoppingLists.reduce(
       (acc, list) =>
@@ -77,31 +81,30 @@ export default function Home() {
   if (!user) return null;
   const { displayName, email, photoURL, uid } = user;
 
+  // talwind styles
   const listValueDivStyle =
     " rounded-lg flex flex-col gap-2 items-center justify-center bg-white border border-gray-300 px-3 py-5 w-full h-20";
 
-  const listValueFigureStyle = "";
   const listValueHeadStyle = "whitespace-nowrap font-semibold";
 
+  // function to hadle search input change, trim and convert to lowercase
   const handleSearchShoppingList = (e) => {
     setSearchValue(e.target.value.toLowerCase().trim());
   };
 
+  // function to pop up the new shopping list dialog and disable the body scroll
   const handleNewShoppingList = () => {
     document.body.style.overflow = "hidden";
     setOpenNewShoppingListDialog(true);
   };
 
-  const handleSaveShoppingList = () => {
-    document.body.style.overflow = "";
-    setOpenNewShoppingListDialog(false);
-  };
-
+  // function to delete a single shopping list from the firestore database
   const handleDeleteSingleShoppingList = async (listId) => {
     const docToDelete = doc(db, "users", uid, "shoppingLists", listId);
     await deleteDoc(docToDelete);
   };
 
+  // function to delete all shopping lists from the firestore database in one go
   const handleDeleteAllShoppingLists = async () => {
     const shoppingListsToDelete = collection(db, "users", uid, "shoppingLists");
     const snapshot = await getDocs(shoppingListsToDelete);
@@ -112,12 +115,14 @@ export default function Home() {
     await batch.commit();
   };
 
+  // function to pop up the edit shopping list dialog and disable the body scroll
   const handleViewShoppingList = (shoppingListData) => {
     setShoppingListData(shoppingListData);
     document.body.style.overflow = "hidden";
     setOpenEditShoppingListDialog(true);
   };
 
+  // function to handle sign out and redirect to the sign-in page
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -128,7 +133,7 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-white p-10 flex flex-col gap-8">
+    <div className="bg-white lg:p-10 p-5 flex flex-col md:gap-8 gap-5 justify-center items-center">
       {/* new list dialog div */}
       {openNewShoppingListDialog && <NewShoppingListDialog />}
 
@@ -136,9 +141,9 @@ export default function Home() {
       {openEditShoppingListDialog && <EditShoppingListDialog />}
 
       {/* nav div with logout and profile image */}
-      <div className="flex flex-row justify-between mb-15 items-center">
+      <div className="flex flex-col md:flex-row md:justify-between justify-center md:mb-12 mb-5 items-center gap-3 w-full">
         {/* hero heading div */}
-        <h1 className="text-[30px] text-gray-700 font-bold">Hi {displayName}, Let's plan shopping</h1>
+        <h1 className="text-[30px] text-gray-500 font-bold">Hi {displayName}, Let's plan shopping</h1>
         <div className="flex flex-row justify-between items-center gap-8 font-semibold">
           <button onClick={handleSignOut}>Log Out</button>
           <div className="flex flex-col items-center justify-center gap-1">
@@ -170,9 +175,9 @@ export default function Home() {
       </div>
 
       {/* main app nav */}
-      <div className="flex gap-20 justify-center items-center w-full">
+      <div className="flex flex-col md:flex gap-5 justify-center items-center w-full">
         {/* search div */}
-        <div className=" flex justify-between gap-5 items-center px-3 py-1 border border-gray-300 rounded-2xl shadow w-1/3">
+        <div className=" flex justify-between gap-5 items-center px-3 py-1 border border-gray-300 rounded-2xl shadow md:w-1/3">
           <input
             className="w-full outline-none"
             placeholder="Search Shopping List - By Name"
@@ -184,14 +189,14 @@ export default function Home() {
         </div>
 
         {/* action button div */}
-        <div className="flex justify-center items-center gap-10 ">
+        <div className="flex justify-center items-center md:gap-10 gap-3 w-full">
           <button onClick={handleDeleteAllShoppingLists}>Delete All Shopping List</button>
           <button onClick={handleNewShoppingList}>New Shopping List</button>
         </div>
       </div>
 
       {/* main body. shopping lists */}
-      <div className="flex flex-wrap gap-5 overflow-auto h-[1000px] px-10 w-full justify-center mt-5">
+      <div className="flex flex-wrap gap-5 overflow-auto md:h-[1000px] h-[90vh] md:px-10 px-2 w-full justify-center mt-5">
         {filteredShoppingLists.length > 0 ? (
           filteredShoppingLists.map((list) => {
             const { listId, listName, listDescription, listItems } = list;
@@ -210,7 +215,7 @@ export default function Home() {
             return (
               <div
                 key={listId}
-                className="flex flex-col gap-12 border border-gray-300 bg-black/4 shadow p-6 rounded-lg w-[320px] h-[400px]"
+                className="flex flex-col gap-12 border border-gray-300 bg-black/4 shadow p-6 rounded-lg w-[320px] md:h-[400px]"
               >
                 {/* Heading div */}
                 <div className="flex w-full justify-between items-center gap-5">
@@ -225,18 +230,18 @@ export default function Home() {
                   <div className="flex flex-row gap-3">
                     <div className={listValueDivStyle}>
                       <h1 className={listValueHeadStyle}>Total Quantity</h1>
-                      <span className={listValueFigureStyle}>{totalQuantity}</span>
+                      <span>{totalQuantity}</span>
                     </div>
                     <div className={listValueDivStyle}>
                       <h1 className={listValueHeadStyle}>Total Items</h1>
-                      <span className={listValueFigureStyle}>{listItems.length}</span>
+                      <span>{listItems.length}</span>
                     </div>
                   </div>
 
                   {/* 1 col div */}
                   <div className={listValueDivStyle}>
                     <h1 className={listValueHeadStyle}>Total Cost</h1>
-                    <span className={listValueFigureStyle}>{totalCost}</span>
+                    <span>{totalCost}</span>
                   </div>
                 </div>
 

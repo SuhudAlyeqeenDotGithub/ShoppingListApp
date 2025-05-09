@@ -11,6 +11,9 @@ import { nanoid } from "nanoid";
 
 const inputStyle = "outline-none border border-gray-300 rounded-lg p-3 py-2 w-full focus:border-gray-400";
 
+// * This component is used to create a new shopping list. It contains a form with inputs for the list name, description, and date.
+// When the form is submitted, it creates a new shopping list in the database. */
+
 export const NewShoppingListDialog = () => {
   const { openNewShoppingListDialog, setOpenNewShoppingListDialog } = useDialogContext();
   const { user } = useAuthContext();
@@ -29,11 +32,14 @@ export const NewShoppingListDialog = () => {
 
   const { listName, listDescription, listDate } = newListData;
 
+  // function to close the dialog and reset the form
   const handleCloseDialog = () => {
     setOpenNewShoppingListDialog(false);
     document.body.style.overflow = "";
   };
 
+  // function to create a new shopping list
+  // it takes the data from the form and adds it to the database
   const handleCreateShoppingList = async () => {
     if (!uid) return;
     if (!listName) return;
@@ -56,6 +62,7 @@ export const NewShoppingListDialog = () => {
     }
   };
 
+  // function to handle the change in the form inputs
   const handleChange = (e) => {
     setNewListData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -110,9 +117,10 @@ export const NewShoppingListDialog = () => {
   );
 };
 
+// * This component is used to edit an existing shopping list. It contains a form with inputs for the list name, description, and date.
+// When the form is submitted, it updates the shopping list in the database. */
 export const EditShoppingListDialog = () => {
-  const { openEditShoppingListDialog, setOpenEditShoppingListDialog, shoppingListData, setShoppingListData } =
-    useDialogContext();
+  const { setOpenEditShoppingListDialog, shoppingListData, setShoppingListData } = useDialogContext();
   const { user } = useAuthContext();
   if (!user) {
     router.push("/signin");
@@ -125,7 +133,6 @@ export const EditShoppingListDialog = () => {
   const [nativeItemsList, setNativeItemsList] = useState(listItems);
   const [openNewItemDialog, setOpenNewItemDialog] = useState(false);
   const [onItemEdit, setOnItemEdit] = useState(false);
-  const [openSaveWarningDialog, setOpenSaveWarningDialog] = useState(false);
   const [unSavedChanges, setUnSavedChanges] = useState(false);
   const [itemData, setItemData] = useState({
     itemId: "",
@@ -137,6 +144,7 @@ export const EditShoppingListDialog = () => {
   const [searchValue, setSearchValue] = useState("");
   const [error, setError] = useState("");
 
+  // this effect is used to monitor the unsaved changes in the shopping list so the browser can warn the user before leaving the page
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (unSavedChanges) {
@@ -153,6 +161,7 @@ export const EditShoppingListDialog = () => {
     };
   }, [unSavedChanges]);
 
+  // this effect is used to update the shopping list items when the user types in the search input
   useEffect(() => {
     if (searchValue === "") {
       setNativeItemsList(listItems);
@@ -164,6 +173,7 @@ export const EditShoppingListDialog = () => {
 
   const { itemId, itemName, itemDescription, itemPrice, itemQuantity } = itemData;
 
+  // this function is used to save the shopping list to the database
   const handleSaveList = async () => {
     const docRef = doc(db, "users", uid, "shoppingLists", listId);
 
@@ -184,10 +194,14 @@ export const EditShoppingListDialog = () => {
       setError(error?.message || "Error creating shopping list");
     }
   };
+
+  // this function is used to handle the change in the form inputs
   const handleChange = (e) => {
     setUnSavedChanges(true);
     setItemData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
+
+  // this function is used to handle creating a new item in the shopping list on client side alone
   const handleCreateNewItem = () => {
     if (!itemName) return;
     const newItem = {
@@ -210,6 +224,7 @@ export const EditShoppingListDialog = () => {
     setOpenNewItemDialog(false);
   };
 
+  // this function is used to handle editing an existing item in the shopping list on client side alone
   const handleEditItem = () => {
     if (!itemName) return;
 
@@ -228,6 +243,8 @@ export const EditShoppingListDialog = () => {
     setOnItemEdit(false);
   };
 
+  // this function is used to handle creating a new item or editing an existing item in the shopping list
+  // it checks if the user is creating a new item or editing an existing item and calls the appropriate function
   const handleEditOrNewItem = (occasion) => {
     if (occasion === "new") {
       handleCreateNewItem();
@@ -236,6 +253,7 @@ export const EditShoppingListDialog = () => {
     }
   };
 
+  // this function is used to hancle the deletion a single item in the shopping list on client side alone
   const handleSingleItemDelete = (itemId) => {
     const updatedItems = nativeItemsList.filter((item) => item.itemId !== itemId);
     setNativeItemsList(updatedItems);
@@ -245,7 +263,7 @@ export const EditShoppingListDialog = () => {
   const newShoppingListItemDialog = (
     <div className="bg-black/50 w-full h-full fixed inset-0 z-50 flex justify-center items-center">
       {/* dialog */}
-      <div className=" flex flex-col gap-7 border border-gray-300 bg-gray-100 shadow p-6 rounded-lg min-h-[400px] w-[500px]">
+      <div className=" flex flex-col gap-7 border border-gray-300 bg-gray-100 shadow p-6 rounded-lg min-h-[400px] w-[500px] m-5">
         {/* heading div */}
         <div className="flex w-full justify-between items-center gap-5 text-[20px] font-bold">
           <h1> {onItemEdit ? "Edit" : "Create"} Item</h1>
@@ -296,7 +314,7 @@ export const EditShoppingListDialog = () => {
           <button
             type="submit"
             disabled={!itemName}
-            className="w-1/5"
+            className="lg:w-1/5"
             onClick={() => handleEditOrNewItem(onItemEdit ? "edit" : "new")}
           >
             {onItemEdit ? "Done" : "Create"}
@@ -306,25 +324,13 @@ export const EditShoppingListDialog = () => {
     </div>
   );
 
-  const saveWarningDialog = (
-    <div className="bg-black/50 w-full h-full fixed inset-0 z-50 flex justify-center items-center">
-      <div className="flex flex-col items-center gap-10 border border-gray-300 bg-gray-100 shadow pt-10 pb-4 rounded-lg min-h-[100px] w-[450px]">
-        <h1 className="font-semibold">Please save you current items before you continue</h1>
-        <div className="flex justify-between items-center gap-5 w-3/4">
-          <button onClick={() => setOpenSaveWarningDialog(false)}>Keep Editing</button>
-          <button onClick={handleSaveList}>Save</button>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="bg-black/50 w-full h-full fixed inset-0 z-50 flex justify-center items-center">
       {/* new item dialog div */}
       {(openNewItemDialog || onItemEdit) && newShoppingListItemDialog}
-      {openSaveWarningDialog && saveWarningDialog}
-      {/* dialog */}
-      <div className=" flex flex-col gap-12 border border-gray-300 bg-gray-100 shadow p-8 rounded-lg h-[870px] w-[800px]">
+
+      {/* shopping list parent dialog */}
+      <div className=" flex flex-col lg:gap-12 gap-8 border border-gray-300 bg-gray-100 shadow p-8 rounded-lg lg:h-[90vh] lg:w-[90vw]">
         {/* heading and save action div */}
         <div className="flex flex-col gap-4">
           {/* heading 1 */}
@@ -336,7 +342,6 @@ export const EditShoppingListDialog = () => {
             </div>
 
             {/* save div */}
-
             <button onClick={handleSaveList}>Save</button>
           </div>
           <textarea
@@ -391,7 +396,7 @@ export const EditShoppingListDialog = () => {
             <h1>Actions</h1>
           </div>
           {/* body items */}
-          <div className="flex flex-col gap-2 items-center overflow-auto h-[460px] p-2">
+          <div className="flex flex-col gap-2 items-center overflow-auto lg:h-[460px] h-[300px] p-2">
             {nativeItemsList.length > 0
               ? nativeItemsList.map((item) => {
                   return (
